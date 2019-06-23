@@ -2,6 +2,7 @@ import * as Bluebird from "bluebird";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import "./App.css";
+import { AsyncResult } from "./async/AsyncResult";
 import { actionCreators } from "./redux/actions/counter";
 import { getCount } from "./redux/selectors";
 
@@ -66,18 +67,6 @@ export default function App() {
     </>
   );
 }
-
-type AsyncResult<T> =
-  | {
-      status: "pending";
-    }
-  | {
-      status: "success";
-      data: T;
-    }
-  | {
-      status: "error";
-    };
 
 function asyncIncrement(): [AsyncResult<number>, (amount?: number) => void] {
   const dispatch = useDispatch();
