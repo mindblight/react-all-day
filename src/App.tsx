@@ -1,60 +1,108 @@
+import * as Bluebird from "bluebird";
 import * as React from "react";
-import { connect } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import "./App.css";
-import { RootState } from "./redux/reducers";
+import { actionCreators } from "./redux/actions/counter";
+import { getCount } from "./redux/selectors";
 
-interface ConnectProps {
-  counter: number;
-}
+export default function App() {
+  // Challenge 1
+  const count = useSelector(getCount);
+  const dispatch = useDispatch();
+  const handleIncrement = React.useCallback(() => {
+    dispatch(actionCreators.increment(count));
+  }, [dispatch, count]);
 
-type Props = {} & ConnectProps;
+  // Challenge 2
+  const [countResult, incrementAsync] = asyncIncrement();
 
-export class App extends React.PureComponent<Props> {
-  render() {
-    return (
-      <>
-        <section className="hero is-primary">
-          <div className="hero-body">
-            <div className="container">
-              <h1 className="title">Counter App</h1>
-            </div>
-          </div>
-        </section>
-        <section className="container">
-          <div className="level">
-            <div className="level-item has-text-centered">
-              <div>
-                <p className="heading">Counter</p>
-                <p className="title">{this.props.counter}</p>
-              </div>
-            </div>
-          </div>
-          {/* Challenge 5: <div className="notification is-danger" /> */}
-          <div className="field is-grouped">
-            <p className="control">
-              <button className="button" id="increment-btn">
-                Click to increment
-              </button>
-            </p>
-            <p className="control">
-              <button className="button" id="delay-increment-btn">
-                Click to increment slowly
-              </button>
-            </p>
-            <p className="control">
-              <button className="button" id="remote-fetch-btn">
-                Click to fetch server-side
-              </button>
-            </p>
-          </div>
-        </section>
-      </>
-    );
+  if (countResult.status === "pending") {
+    return <span>Loading...</span>;
+  } else if (countResult.status === "error") {
+    return <span>Error!</span>;
   }
+
+  return (
+    <>
+      <section className="hero is-primary">
+        <div className="hero-body">
+          <div className="container">
+            <h1 className="title">Counter App</h1>
+          </div>
+        </div>
+      </section>
+      <section className="container">
+        <div className="level">
+          <div className="level-item has-text-centered">
+            <div>
+              <p className="heading">Counter</p>
+              <p className="title">{count}</p>
+            </div>
+          </div>
+        </div>
+        {/* Challenge 5: <div className="notification is-danger" /> */}
+        <div className="field is-grouped">
+          <p className="control">
+            <button
+              className="button"
+              id="increment-btn"
+              onClick={handleIncrement}
+            >
+              Click to increment
+            </button>
+          </p>
+          <p className="control">
+            <button className="button" id="delay-increment-btn">
+              Click to increment slowly
+            </button>
+          </p>
+          <p className="control">
+            <button className="button" id="remote-fetch-btn">
+              Click to fetch server-side
+            </button>
+          </p>
+        </div>
+      </section>
+    </>
+  );
 }
 
-const mapStateToProps = (state: RootState) => ({
-  counter: state.counter.value
-});
+type AsyncResult<T> =
+  | {
+      status: "pending";
+    }
+  | {
+      status: "success";
+      data: T;
+    }
+  | {
+      status: "error";
+    };
 
-export default connect(mapStateToProps)(App);
+function asyncIncrement(): [AsyncResult<number>, (amount?: number) => void] {
+  const dispatch = useDispatch();
+  const [status, setStatus] = React.useState<AsyncResult<number>["status"]>(
+    "pending"
+  );
+
+  const increment = React.useCallback(
+    (amount: number = 1) => {
+      // TODO: Add cancellation. Multiple calls to this method could cause race condition if async time varies
+      Bluebird.delay(1000)
+        .then(() => {
+          dispatch(increment(amount));
+          setStatus("success");
+        })
+        .catch(() => setStatus("error"));
+    },
+    [setStatus, dispatch]
+  );
+
+  return [
+    {
+      status,
+      data: useSelector(getCount)
+    },
+    increment
+  ];
+}
